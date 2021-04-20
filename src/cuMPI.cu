@@ -1,12 +1,5 @@
 #include "cuMPI_runtime.h"
 
-int myRank, nRanks, localRank = 0;
-ncclUniqueId id;
-cuMPI_Comm comm;
-cudaStream_t defaultStream;
-uint64_t hostHashs[10];
-char hostname[1024];
-
 static uint64_t getHostHash(const char *string) {
   // based on DJB2, result = result * 33 + char
   uint64_t result = 5381;
@@ -102,6 +95,7 @@ int testSendRecv() {
   cuMPI_Finalize();
   return 0;
 }
+
 int testAllReduce() {
   cuMPI_Init(NULL, NULL);
   

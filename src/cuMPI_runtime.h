@@ -116,4 +116,15 @@ int cuMPI_Barrier( cuMPI_Comm comm );
 int cuMPI_Comm_size( cuMPI_Comm comm, int *size );
 int cuMPI_Comm_rank( cuMPI_Comm comm, int *rank );
 
+
+extern int myRank;                 // cuMPI comm local ranks
+extern int nRanks;                 // total cuMPI comm ranks
+extern int localRank;              // CUDA device ID
+
+extern ncclUniqueId id;            // NCCL Unique ID
+extern cuMPI_Comm comm;            // cuMPI comm
+extern cudaStream_t defaultStream; // CUDA stream generated for each GPU
+extern uint64_t hostHashs[10];     // host name hash in cuMPI
+extern char hostname[1024];        // host name for identification in cuMPI
+
 #endif
