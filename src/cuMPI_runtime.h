@@ -101,6 +101,7 @@ typedef MPI_Status cuMPI_Status;
 int cuMPI_Initialized( int *flag );
 int cuMPI_Init( int *argc, char ***argv );
 int cuMPI_Finalize();
+
 int cuMPI_Allreduce(const void *sendbuf, void *recvbuf, int count,
   cuMPI_Datatype datatype, cuMPI_Op op, cuMPI_Comm comm);
 int cuMPI_Sendrecv(const void *sendbuf, int sendcount, cuMPI_Datatype sendtype,
@@ -108,10 +109,11 @@ int cuMPI_Sendrecv(const void *sendbuf, int sendcount, cuMPI_Datatype sendtype,
   void *recvbuf, int recvcount, cuMPI_Datatype recvtype,
   int source, int recvtag,
   cuMPI_Comm comm, cuMPI_Status *status);
+int cuMPI_Bcast( void *buffer, int count, cuMPI_Datatype datatype, int root, 
+  cuMPI_Comm comm );
+int cuMPI_Barrier( cuMPI_Comm comm );
 
-
-
-int cuMPI_Comm_size( MPI_Comm comm, int *size );
-int cuMPI_Comm_rank( MPI_Comm comm, int *rank );
+int cuMPI_Comm_size( cuMPI_Comm comm, int *size );
+int cuMPI_Comm_rank( cuMPI_Comm comm, int *rank );
 
 #endif
