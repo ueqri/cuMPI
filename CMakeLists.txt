@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(cuMPI-lib)
+set (PROJECT_NAME cuMPI)
+project(${PROJECT_NAME})
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 

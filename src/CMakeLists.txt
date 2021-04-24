@@ -1,5 +1,8 @@
-FILE(GLOB_RECURSE sources "*.cu" "*.cpp" "*.c")
-SET(name "cuMPI-demo")
-CUDA_ADD_EXECUTABLE(${name} ${sources})
-TARGET_LINK_LIBRARIES(${name} /usr/local/cuda/lib64/libcudart.so ${MPI_LIBRARIES})
-TARGET_LINK_LIBRARIES(${name} ${NCCL_LIBRARY})
+# FILE(GLOB_RECURSE sources "*.cu" "*.cpp" "*.c")
+# SET(name "cuMPI-demo")
+# CUDA_ADD_EXECUTABLE(${name} ${sources})
+
+cuda_add_library(${PROJECT_NAME} SHARED cuMPI.cu)
+
+target_link_libraries(${PROJECT_NAME} /usr/local/cuda/lib64/libcudart.so ${MPI_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${NCCL_LIBRARY})
