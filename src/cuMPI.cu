@@ -218,6 +218,8 @@ int cuMPI_Sendrecv(const void *sendbuf, int sendcount, cuMPI_Datatype sendtype,
   NCCL_CHECK(ncclRecv(recvbuf, recvcount, recvtype, dest, comm, defaultStream));
   NCCL_CHECK(ncclGroupEnd());
 
+  // completing NCCL operation by synchronizing on the CUDA stream
+  CUDA_CHECK(cudaStreamSynchronize(defaultStream));
   return 0;
 }
 
@@ -228,6 +230,9 @@ int cuMPI_Bcast( void *buffer, int count, cuMPI_Datatype datatype, int root,
   #endif
   // Legacy in-place version of ncclBroadcast in a similar fashion to MPI_Bcast
   NCCL_CHECK(ncclBcast(buffer, count, datatype, root, comm, defaultStream));
+
+  // completing NCCL operation by synchronizing on the CUDA stream
+  CUDA_CHECK(cudaStreamSynchronize(defaultStream));
   return 0;
 }
 
