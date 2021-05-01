@@ -163,7 +163,7 @@ int cuMPI_Init(int *argc, char ***argv) {
   MPI_CHECK(MPI_Bcast((void *)&id, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD));
 
   // picking a GPU based on localRank, allocate device buffers
-  printf("Picking Device: %d for MPI Rank: %d/%d\n", localRank, myRank, nRanks);
+  printf("Picking Device in %s: %d for MPI Rank: %d/%d\n", hostname, localRank, myRank, nRanks);
   CUDA_CHECK(cudaSetDevice(localRank));
   CUDA_CHECK(cudaStreamCreate(&defaultStream));
 
