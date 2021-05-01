@@ -197,7 +197,7 @@ int cuMPI_Allreduce(const void *sendbuf, void *recvbuf, int count,
                             datatype, op, comm, defaultStream));
 
   // completing NCCL operation by synchronizing on the CUDA stream
-  CUDA_CHECK(cudaStreamSynchronize(defaultStream));
+  // CUDA_CHECK(cudaStreamSynchronize(defaultStream));
   return 0;
 }
 
@@ -219,7 +219,7 @@ int cuMPI_Sendrecv(const void *sendbuf, int sendcount, cuMPI_Datatype sendtype,
   NCCL_CHECK(ncclGroupEnd());
 
   // completing NCCL operation by synchronizing on the CUDA stream
-  CUDA_CHECK(cudaStreamSynchronize(defaultStream));
+  // CUDA_CHECK(cudaStreamSynchronize(defaultStream));
   return 0;
 }
 
@@ -232,7 +232,7 @@ int cuMPI_Bcast( void *buffer, int count, cuMPI_Datatype datatype, int root,
   NCCL_CHECK(ncclBcast(buffer, count, datatype, root, comm, defaultStream));
 
   // completing NCCL operation by synchronizing on the CUDA stream
-  CUDA_CHECK(cudaStreamSynchronize(defaultStream));
+  // CUDA_CHECK(cudaStreamSynchronize(defaultStream));
   return 0;
 }
 
