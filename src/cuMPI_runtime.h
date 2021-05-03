@@ -4,10 +4,11 @@
 #include "cuda_runtime.h"
 #include "nccl.h"
 #include "mpi.h"
-#include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <assert.h>
+#include <cstdio>
+#include <map>
 
 #define MPI_CHECK(cmd) do {                      \
   int e = cmd;                                   \
@@ -109,6 +110,11 @@ int cuMPI_Sendrecv(const void *sendbuf, int sendcount, cuMPI_Datatype sendtype,
   void *recvbuf, int recvcount, cuMPI_Datatype recvtype,
   int source, int recvtag,
   cuMPI_Comm comm, cuMPI_Status *status);
+int cuMPI_Complex_Sendrecv(const void *sendreal, const void *sendimag, int sendcount, cuMPI_Datatype sendtype,
+  int dest, int sendtag,
+  void *recvreal, void *recvimag, int recvcount, cuMPI_Datatype recvtype,
+  int source, int recvtag,
+  cuMPI_Comm comm, cuMPI_Status *status);
 int cuMPI_Bcast( void *buffer, int count, cuMPI_Datatype datatype, int root, 
   cuMPI_Comm comm );
 int cuMPI_Barrier( cuMPI_Comm comm );
@@ -116,15 +122,22 @@ int cuMPI_Barrier( cuMPI_Comm comm );
 int cuMPI_Comm_size( cuMPI_Comm comm, int *size );
 int cuMPI_Comm_rank( cuMPI_Comm comm, int *rank );
 
+int cuMPI_NewGlobalComm(cuMPI_Comm *newcomm);
+int cuMPI_CocurrentStart(cuMPI_Comm targetcomm);
+int cuMPI_CocurrentEnd(cuMPI_Comm targetcomm);
 
-extern int myRank;                 // cuMPI comm local ranks
-extern int nRanks;                 // total cuMPI comm ranks
-extern int localRank;              // CUDA device ID
+extern int myRank;                      // cuMPI comm local ranks
+extern int nRanks;                      // total cuMPI comm ranks
+extern int localRank;                   // CUDA device ID
 
-extern ncclUniqueId id;            // NCCL Unique ID
-extern cuMPI_Comm comm;            // cuMPI comm
-extern cudaStream_t defaultStream; // CUDA stream generated for each GPU
-extern uint64_t hostHashs[10];     // host name hash in cuMPI
-extern char hostname[1024];        // host name for identification in cuMPI
+extern ncclUniqueId id;                 // NCCL Unique ID
+extern cuMPI_Comm comm;                 // cuMPI comm
+extern cudaStream_t commStream;         // CUDA stream generated for each GPU
+extern cuMPI_Comm defaultComm;          // cuMPI comm
+extern cudaStream_t defaultCommStream;  // CUDA stream generated for each GPU
+extern uint64_t hostHashs[10];          // host name hash in cuMPI
+extern char hostname[1024];             // host name for identification in cuMPI
+
+extern std::map<cuMPI_Comm, cudaStream_t> comm2stream;
 
 #endif

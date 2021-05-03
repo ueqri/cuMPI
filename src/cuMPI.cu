@@ -25,110 +25,6 @@ int cuMPI_AllocateOneGPUPerProcess() {
   return 0;
 }
 
-
-int testBcast() {
-  cuMPI_Init(NULL, NULL);
-  
-  int count = 50;
-  float *h_send = (float *)malloc(count * sizeof(float)),
-        *h_recv = (float *)malloc(count * sizeof(float));
-  if (myRank == 0) {
-    for (int i = 0; i < count; ++i) {
-      h_send[i] = 2 * i + myRank;
-    }
-  }
-
-  float *d_send = NULL, *d_recv = NULL;
-  CUDA_CHECK(cudaMalloc(&d_send, count * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&d_recv, count * sizeof(float)));
-  
-  CUDA_CHECK(cudaMemcpy(d_send, h_send, count * sizeof(float), cudaMemcpyHostToDevice));
-
-  cuMPI_Bcast(d_send, count, cuMPI_FLOAT, 0, comm);
-
-  CUDA_CHECK(cudaMemcpy(h_recv, d_send, count * sizeof(float), cudaMemcpyDeviceToHost));
-  
-  printf("[%d]:\n", myRank);
-  for (int i = 0; i < count; ++i) {
-    printf("%d ", (int)h_recv[i]);
-  }
-
-  CUDA_CHECK(cudaFree(d_send));
-  CUDA_CHECK(cudaFree(d_recv));
-  free(h_send);
-  free(h_recv);
-  cuMPI_Finalize();
-  return 0;
-}
-
-int testSendRecv() {
-  cuMPI_Init(NULL, NULL);
-  
-  int count = 50;
-  float *h_send = (float *)malloc(count * sizeof(float)),
-        *h_recv = (float *)malloc(count * sizeof(float));
-  for (int i = 0; i < count; ++i) {
-    h_send[i] = 2 * i + localRank;
-  }
-
-  float *d_send = NULL, *d_recv = NULL;
-  CUDA_CHECK(cudaMalloc(&d_send, count * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&d_recv, count * sizeof(float)));
-  
-  CUDA_CHECK(cudaMemcpy(d_send, h_send, count * sizeof(float), cudaMemcpyHostToDevice));
-
-  cuMPI_Status status;
-  int peer = 1 - myRank;
-  cuMPI_Sendrecv(d_send, count, cuMPI_FLOAT, peer, 0, d_recv, count, cuMPI_FLOAT, localRank, 0, comm, &status);
-
-  CUDA_CHECK(cudaMemcpy(h_recv, d_recv, count * sizeof(float), cudaMemcpyDeviceToHost));
-  
-  printf("[%d]:\n", myRank);
-  for (int i = 0; i < count; ++i) {
-    printf("%d->%d ", (int)h_send[i], (int)h_recv[i]);
-  }
-
-  CUDA_CHECK(cudaFree(d_send));
-  CUDA_CHECK(cudaFree(d_recv));
-  free(h_send);
-  free(h_recv);
-  cuMPI_Finalize();
-  return 0;
-}
-
-int testAllReduce() {
-  cuMPI_Init(NULL, NULL);
-  
-  int count = 50;
-  float *h_send = (float *)malloc(count * sizeof(float)),
-        *h_recv = (float *)malloc(count * sizeof(float));
-  for (int i = 0; i < count; ++i) {
-    h_send[i] = 2 * i + myRank;
-  }
-
-  float *d_send = NULL, *d_recv = NULL;
-  CUDA_CHECK(cudaMalloc(&d_send, count * sizeof(float)));
-  CUDA_CHECK(cudaMalloc(&d_recv, count * sizeof(float)));
-  
-  CUDA_CHECK(cudaMemcpy(d_send, h_send, count * sizeof(float), cudaMemcpyHostToDevice));
-
-  cuMPI_Allreduce(d_send, d_recv, count, cuMPI_FLOAT, cuMPI_SUM, comm);
-
-  CUDA_CHECK(cudaMemcpy(h_recv, d_recv, count * sizeof(float), cudaMemcpyDeviceToHost));
-  
-  printf("[%d]:\n", myRank);
-  for (int i = 0; i < count; ++i) {
-    printf("%d->%d ", (int)h_send[i], (int)h_recv[i]);
-  }
-
-  CUDA_CHECK(cudaFree(d_send));
-  CUDA_CHECK(cudaFree(d_recv));
-  free(h_send);
-  free(h_recv);
-  cuMPI_Finalize();
-  return 0;
-}
-
 int cuMPI_Initialized(int *flag) { 
   return MPI_Initialized(flag);
 }
@@ -156,7 +52,7 @@ int cuMPI_Init(int *argc, char ***argv) {
     }
   }
 
-  // get NCCL unique ID at rank 0 and broadcast it to all others
+  // get NCCL **default** unique ID at rank 0 and broadcast it to all others
   if (myRank == 0) {
     ncclGetUniqueId(&id);
   }
@@ -165,16 +61,21 @@ int cuMPI_Init(int *argc, char ***argv) {
   // picking a GPU based on localRank, allocate device buffers
   printf("Picking Device in %s: %d for MPI Rank: %d/%d\n", hostname, localRank, myRank, nRanks);
   CUDA_CHECK(cudaSetDevice(localRank));
-  CUDA_CHECK(cudaStreamCreate(&defaultStream));
+  CUDA_CHECK(cudaStreamCreate(&commStream));
+  defaultCommStream = commStream;
 
-  printf("[%d]: from stream %p\n", localRank, (void*)defaultStream);
+  printf("[%d]: from default stream %p\n", localRank, (void*)commStream);
 
-  // initializing NCCL
+  // initializing **default** NCCL Communicator
   NCCL_CHECK(ncclCommInitRank(&comm, nRanks, id, myRank));
   // test the initiation
   int tempRank;
   NCCL_CHECK(ncclCommUserRank(comm, &tempRank));
   assert( tempRank == myRank );
+  defaultComm = comm;
+
+  // bind comm with stream
+  comm2stream[comm] = commStream;
 
   printf("Initiated NCCL for MPI Rank: %d/%d\n", myRank, nRanks);
 
@@ -194,10 +95,8 @@ int cuMPI_Allreduce(const void *sendbuf, void *recvbuf, int count,
   printf("AllReduce Communicating...\n");
   #endif
   NCCL_CHECK(ncclAllReduce((const void *)sendbuf, (void *)recvbuf, count,
-                            datatype, op, comm, defaultStream));
+                            datatype, op, comm, commStream));
 
-  // completing NCCL operation by synchronizing on the CUDA stream
-  // CUDA_CHECK(cudaStreamSynchronize(defaultStream));
   return 0;
 }
 
@@ -214,12 +113,33 @@ int cuMPI_Sendrecv(const void *sendbuf, int sendcount, cuMPI_Datatype sendtype,
   #endif
   // peer rank id is `dest`
   NCCL_CHECK(ncclGroupStart());
-  NCCL_CHECK(ncclSend(sendbuf, sendcount, sendtype, dest, comm, defaultStream));
-  NCCL_CHECK(ncclRecv(recvbuf, recvcount, recvtype, dest, comm, defaultStream));
+  NCCL_CHECK(ncclSend(sendbuf, sendcount, sendtype, dest, comm, commStream));
+  NCCL_CHECK(ncclRecv(recvbuf, recvcount, recvtype, dest, comm, commStream));
   NCCL_CHECK(ncclGroupEnd());
 
-  // completing NCCL operation by synchronizing on the CUDA stream
-  // CUDA_CHECK(cudaStreamSynchronize(defaultStream));
+  return 0;
+}
+
+
+int cuMPI_Complex_Sendrecv(const void *sendreal, const void *sendimag, int sendcount, cuMPI_Datatype sendtype,
+  int dest, int sendtag,
+  void *recvreal, void *recvimag, int recvcount, cuMPI_Datatype recvtype,
+  int source, int recvtag,
+  cuMPI_Comm comm, cuMPI_Status *status) {
+  
+  assert(sendtag == recvtag);
+
+  #if CUMPI_DEBUG > 1
+  printf("Send&Receive Complex Communicating...\n");
+  #endif
+  // peer rank id is `dest`
+  NCCL_CHECK(ncclGroupStart());
+  NCCL_CHECK(ncclSend(sendreal, sendcount, sendtype, dest, comm, commStream));
+  NCCL_CHECK(ncclSend(sendimag, sendcount, sendtype, dest, comm, commStream));
+  NCCL_CHECK(ncclRecv(recvreal, recvcount, recvtype, dest, comm, commStream));
+  NCCL_CHECK(ncclRecv(recvimag, recvcount, recvtype, dest, comm, commStream));
+  NCCL_CHECK(ncclGroupEnd());
+
   return 0;
 }
 
@@ -229,10 +149,8 @@ int cuMPI_Bcast( void *buffer, int count, cuMPI_Datatype datatype, int root,
   printf("Bcast Communicating...\n");
   #endif
   // Legacy in-place version of ncclBroadcast in a similar fashion to MPI_Bcast
-  NCCL_CHECK(ncclBcast(buffer, count, datatype, root, comm, defaultStream));
+  NCCL_CHECK(ncclBcast(buffer, count, datatype, root, comm, commStream));
 
-  // completing NCCL operation by synchronizing on the CUDA stream
-  // CUDA_CHECK(cudaStreamSynchronize(defaultStream));
   return 0;
 }
 
@@ -242,7 +160,7 @@ int cuMPI_Barrier( cuMPI_Comm comm ) {
   printf("Barrier Waiting...\n");
   #endif
   // ncclCommGetAsyncError
-  CUDA_CHECK(cudaStreamSynchronize(defaultStream));
+  CUDA_CHECK(cudaStreamSynchronize(commStream));
   return 0;
 }
 
@@ -259,5 +177,52 @@ int cuMPI_Comm_rank(cuMPI_Comm comm, int *rank) {
   #if CUMPI_DEBUG > 1
   printf("Comm User Rank: [%d]\n", *rank);
   #endif
+  return 0;
+}
+
+int cuMPI_NewGlobalComm(cuMPI_Comm *newcomm) {
+  ncclUniqueId newid;
+  
+  // get NCCL new unique ID at rank 0 and broadcast it to all others
+  if (myRank == 0) {
+    ncclGetUniqueId(&newid);
+  }
+  MPI_CHECK(MPI_Bcast((void *)&newid, sizeof(newid), MPI_BYTE, 0, MPI_COMM_WORLD));
+
+  // initializing NCCL
+  NCCL_CHECK(ncclCommInitRank(newcomm, nRanks, newid, myRank));
+
+  // test the initiation
+  int tempRank;
+  NCCL_CHECK(ncclCommUserRank(*newcomm, &tempRank));
+  assert( tempRank == myRank );
+
+  // create the stream, and bind it to comm
+  cudaStream_t tmpStream;
+  CUDA_CHECK(cudaStreamCreate(&tmpStream));
+  comm2stream[*newcomm] = tmpStream;
+
+  return 0;
+}
+
+int cuMPI_NewPipe(cuMPI_Comm *pipe) {
+  // TODO
+  return 0;
+}
+
+int cuMPI_CocurrentStart(cuMPI_Comm targetcomm) {
+  defaultComm = comm;
+  defaultCommStream = commStream;
+  auto iter = comm2stream.find(targetcomm);
+  assert( iter != comm2stream.end() );
+  // TODO comm
+  commStream = iter->second;
+  return 0;
+}
+
+int cuMPI_CocurrentEnd(cuMPI_Comm targetcomm) {
+  // TODO targetcomm
+  comm = defaultComm;
+  commStream = defaultCommStream;
   return 0;
 }
