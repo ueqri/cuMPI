@@ -182,7 +182,7 @@ int cuMPI_Comm_rank(cuMPI_Comm comm, int *rank) {
   return 0;
 }
 
-int cuMPI_NewGlobalComm(cuMPI_Comm *newcomm) {
+cudaStream_t cuMPI_NewGlobalComm(cuMPI_Comm *newcomm) {
   ncclUniqueId newid;
   
   // get NCCL new unique ID at rank 0 and broadcast it to all others
@@ -206,7 +206,7 @@ int cuMPI_NewGlobalComm(cuMPI_Comm *newcomm) {
 
   comm2stream[*newcomm] = tmpStream;
 
-  return 0;
+  return tmpStream;
 }
 
 int cuMPI_NewPipe(cuMPI_Comm *pipe) {

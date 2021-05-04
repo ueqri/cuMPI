@@ -122,7 +122,7 @@ int cuMPI_Barrier( cuMPI_Comm comm );
 int cuMPI_Comm_size( cuMPI_Comm comm, int *size );
 int cuMPI_Comm_rank( cuMPI_Comm comm, int *rank );
 
-int cuMPI_NewGlobalComm(cuMPI_Comm *newcomm);
+cudaStream_t cuMPI_NewGlobalComm(cuMPI_Comm *newcomm);
 int cuMPI_CocurrentStart(cuMPI_Comm targetcomm);
 int cuMPI_CocurrentEnd(cuMPI_Comm targetcomm);
 
