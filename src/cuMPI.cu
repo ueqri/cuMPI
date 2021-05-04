@@ -97,6 +97,8 @@ int cuMPI_Allreduce(const void *sendbuf, void *recvbuf, int count,
   NCCL_CHECK(ncclAllReduce((const void *)sendbuf, (void *)recvbuf, count,
                             datatype, op, comm, commStream));
 
+  // completing NCCL operation by synchronizing on the CUDA stream
+  // CUDA_CHECK(cudaStreamSynchronize(commStream));
   return 0;
 }
 
@@ -199,7 +201,9 @@ int cuMPI_NewGlobalComm(cuMPI_Comm *newcomm) {
 
   // create the stream, and bind it to comm
   cudaStream_t tmpStream;
+  // CUDA_CHECK(cudaStreamCreateWithFlags(&tmpStream, cudaStreamNonBlocking));
   CUDA_CHECK(cudaStreamCreate(&tmpStream));
+
   comm2stream[*newcomm] = tmpStream;
 
   return 0;
