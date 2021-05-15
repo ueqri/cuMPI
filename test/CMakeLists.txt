@@ -37,16 +37,31 @@ LINK_DIRECTORIES(
 )
 
 cuda_add_executable(
-  "testAllReduce"
-  main.cu
+  "${PROJECT_NAME}AllReduce"
+  testAllReduce.cu
+)
+target_link_libraries(
+  "${PROJECT_NAME}AllReduce"
+  ${CMAKE_BINARY_DIR}/src/libcuMPI.so
+  ${NCCL_LIBRARY}
 )
 
 cuda_add_executable(
-  ${PROJECT_NAME}
-  CocurrentSendRecv.cu
+  "${PROJECT_NAME}Bcast"
+  testBcast.cu
+)
+target_link_libraries(
+  "${PROJECT_NAME}Bcast"
+  ${CMAKE_BINARY_DIR}/src/libcuMPI.so
+  ${NCCL_LIBRARY}
 )
 
+cuda_add_executable(
+  "${PROJECT_NAME}SendRecv"
+  testSendRecv.cu
+)
 target_link_libraries(
-  ${PROJECT_NAME}
+  "${PROJECT_NAME}SendRecv"
   ${CMAKE_BINARY_DIR}/src/libcuMPI.so
+  ${NCCL_LIBRARY}
 )
