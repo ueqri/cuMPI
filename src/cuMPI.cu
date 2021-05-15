@@ -92,13 +92,11 @@ int cuMPI_Finalize(){
 int cuMPI_Allreduce(const void *sendbuf, void *recvbuf, int count,
   cuMPI_Datatype datatype, cuMPI_Op op, cuMPI_Comm comm){
   #if CUMPI_DEBUG > 1
-  printf("AllReduce Communicating...\n");
+  printf("AllReduce Communicating: %d bytes \n", count * sizeof(datatype));
   #endif
   NCCL_CHECK(ncclAllReduce((const void *)sendbuf, (void *)recvbuf, count,
                             datatype, op, comm, commStream));
 
-  // completing NCCL operation by synchronizing on the CUDA stream
-  // CUDA_CHECK(cudaStreamSynchronize(commStream));
   return 0;
 }
 
@@ -111,7 +109,7 @@ int cuMPI_Sendrecv(const void *sendbuf, int sendcount, cuMPI_Datatype sendtype,
   //(void*)(status), (void)(source); // variable not use
 
   #if CUMPI_DEBUG > 1
-  printf("Send&Receive Communicating...\n");
+  printf("Send Receive Communicating: %d bytes \n", sendcount * sizeof(sendtype));
   #endif
   // peer rank id is `dest`
   NCCL_CHECK(ncclGroupStart());
@@ -132,7 +130,7 @@ int cuMPI_Complex_Sendrecv(const void *sendreal, const void *sendimag, int sendc
   assert(sendtag == recvtag);
 
   #if CUMPI_DEBUG > 1
-  printf("Send&Receive Complex Communicating...\n");
+  printf("Send Receive Complex Communicating: %d bytes \n", sendcount * sizeof(sendtype));
   #endif
   // peer rank id is `dest`
   NCCL_CHECK(ncclGroupStart());
@@ -148,7 +146,7 @@ int cuMPI_Complex_Sendrecv(const void *sendreal, const void *sendimag, int sendc
 int cuMPI_Bcast( void *buffer, int count, cuMPI_Datatype datatype, int root, 
   cuMPI_Comm comm ) {
   #if CUMPI_DEBUG > 1
-  printf("Bcast Communicating...\n");
+  printf("Bcast Communicating: %d bytes \n", count * sizeof(datatype));
   #endif
   // Legacy in-place version of ncclBroadcast in a similar fashion to MPI_Bcast
   NCCL_CHECK(ncclBcast(buffer, count, datatype, root, comm, commStream));
@@ -159,9 +157,9 @@ int cuMPI_Bcast( void *buffer, int count, cuMPI_Datatype datatype, int root,
 int cuMPI_Barrier( cuMPI_Comm comm ) {
   // TODO
   #if CUMPI_DEBUG > 1
-  printf("Barrier Waiting...\n");
+  printf("<--- Barrier Waiting --->\n");
   #endif
-  // ncclCommGetAsyncError
+  // TODO: investigate `ncclCommGetAsyncError`
   CUDA_CHECK(cudaStreamSynchronize(commStream));
   return 0;
 }

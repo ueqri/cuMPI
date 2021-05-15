@@ -138,6 +138,7 @@ extern cudaStream_t defaultCommStream;  // CUDA stream generated for each GPU
 extern uint64_t hostHashs[10];          // host name hash in cuMPI
 extern char hostname[1024];             // host name for identification in cuMPI
 
+// TODO: replace std::map
 extern std::map<cuMPI_Comm, cudaStream_t> comm2stream;
 
 #endif

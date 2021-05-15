@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-set (PROJECT_NAME cuMPI)
+set(PROJECT_NAME cuMPI)
 project(${PROJECT_NAME})
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -22,3 +22,5 @@ include(FindCUDA)
 include_directories(/usr/local/cuda/include ${MPI_INCLUDE_PATH})
 
 add_subdirectory(src)
+add_subdirectory(benchmark)
+add_subdirectory(test)
