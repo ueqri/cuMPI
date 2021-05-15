@@ -7,8 +7,6 @@ if [ -d "build" ]; then
 fi
 mkdir build
 cd build
-cmake -DNCCL_LIBRARY=/lib64/libnccl.so \
-      -DNCCL_INCLUDE_DIR=/usr/include/ \
-      ..
+cmake ..
 make -j$(procs) && \
 mpirun -np 2 benchmark/cuMPI-benchmark
